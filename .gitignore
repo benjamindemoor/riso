@@ -2,3 +2,4 @@ node_modules/
 riso-app/dist/
 .vercel/
 .DS_Store
+.env*
