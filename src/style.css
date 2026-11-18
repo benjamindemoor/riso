@@ -1,0 +1,1249 @@
+/* Monospace-everywhere, hairline-border, high-contrast look — loosely inspired by are.na's
+   research-library aesthetic (dense text, thin black rules, no decoration for its own sake). Uses
+   CSS custom properties for the handful of colors that need to flip between light/dark rather than
+   hardcoding a shade per rule, since `color-scheme: light dark` means the browser (and this app)
+   need to actually support both, not just look plausible in whichever theme was last tested. */
+:root {
+  color-scheme: light dark;
+  --library-panel-height: 215px;
+  --preview-actions-bar-height: 45px;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Fira Code', Menlo, Consolas, 'Liberation Mono', monospace;
+  --fg: #111;
+  --bg: #fff;
+  --border: #000;
+  --border-soft: #0003;
+  --muted: #0009;
+  --accent: #111;
+  --accent-fg: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e8e8e8;
+    --bg: #111;
+    --border: #e8e8e8;
+    --border-soft: #ffffff33;
+    --muted: #e8e8e8b3;
+    --accent: #e8e8e8;
+    --accent-fg: #111;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.4;
+}
+
+html, body {
+  height: 100%;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* Flat, hairline-bordered, no-radius controls — the "geeky terminal tool" look the mono font sets
+   up needs matching chrome, not the rounded default form controls sitting awkwardly on top of it. */
+button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 0;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+input[type='text'],
+input[type='number'],
+input[type='file'],
+select {
+  border: 1px solid var(--border-soft);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 3px 6px;
+}
+
+input[type='color'] {
+  border: 1px solid var(--border-soft);
+  border-radius: 0;
+  padding: 0;
+  width: 26px;
+  height: 26px;
+  background: var(--bg);
+}
+
+#tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-button {
+  padding: 10px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tab-button.active {
+  border-bottom-color: var(--fg);
+  font-weight: 700;
+}
+
+#app,
+#airbrush-app,
+#posterize-app,
+#cmyk-app,
+#screenprint-app,
+#funky-app {
+  display: flex;
+  height: calc(100vh - 41px - var(--preview-actions-bar-height) - var(--library-panel-height));
+  overflow: hidden;
+}
+
+/* Persistent, app-wide bar for the active tab's download/save buttons — see main.ts's
+   refreshPreviewActionsBar(). Fixed height (matching the var every tab's own height budget already
+   subtracts above) so the layout never shifts between "has buttons" and "empty" states — visually
+   empty rather than collapsed when the active tab has no result yet. */
+#preview-actions-bar {
+  /* `min-height`, not `height` — the tab areas' own height budget above subtracts this same
+     variable assuming ONE row of buttons, which comfortably fits on typical desktop widths (the
+     common case this app is used at); on a narrow enough window that the 5 buttons wrap to a
+     second line, letting this bar grow past its nominal budget (at the cost of a little of the
+     library panel's own space) is a much better trade-off than silently clipping buttons via a
+     hard `height` + `overflow: hidden`. */
+  min-height: var(--preview-actions-bar-height);
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  box-sizing: border-box;
+}
+
+/* Photoshop-style dockable panel, always visible at the bottom of the app regardless of which
+   tab is active — browsing/reopening a saved photo lives here now, not in each tab's sidebar. */
+#library-panel {
+  height: var(--library-panel-height);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+#library-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+
+.library-panel-tab {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.library-panel-tab.active {
+  background: var(--accent); color: var(--accent-fg);
+  font-weight: 600;
+}
+
+#library-panel-controls {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+#library-panel-controls input,
+#library-panel-controls select {
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+#library-panel-controls input {
+  width: 160px;
+}
+
+#library-panel-status {
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Row holding the persistent preview pane and the (existing) scrolling grid body side by side. */
+#library-panel-main {
+  flex: 1;
+  display: flex;
+  min-height: 0; /* same flex-child scroll pitfall as .sidebar-scroll -- required for
+    #library-panel-body's own overflow-y:auto to actually scroll instead of stretching this row */
+  overflow: hidden;
+}
+
+/* Always shows a large, legible preview of whichever thumbnail is currently most visible as you
+   scroll the grid (see ui/library.ts's IntersectionObserver tracking) -- the small 72px thumbnails
+   in #library-grid are otherwise too small to make out at a glance while browsing a long library. */
+#library-panel-preview {
+  flex: 0 0 160px;
+  width: 160px;
+  border-right: 1px solid var(--border-soft);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+#library-panel-preview img {
+  max-width: 100%;
+  max-height: calc(100% - 20px);
+  object-fit: contain;
+}
+
+#library-panel-preview-label {
+  font-size: 10px;
+  opacity: 0.7;
+  text-align: center;
+  word-break: break-all;
+  max-width: 100%;
+}
+
+#library-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+/* The actual grid layout comes from renderLibrary()'s own inner #library-grid div (existing rule
+   below) — this class just marks the 4 (one-per-category) wrapper elements the panel toggles
+   visibility on. */
+
+/* #app/#airbrush-app/#posterize-app/#cmyk-app/#screenprint-app/#funky-app's own `display: flex`
+   above beats the browser's default `[hidden] { display: none}` UA rule (equal ID specificity,
+   later in source) — same class of bug as the Fase 24 `.field-row` issue. This combined
+   ID+attribute selector is more specific and wins. */
+#app[hidden],
+#airbrush-app[hidden],
+#posterize-app[hidden],
+#cmyk-app[hidden],
+#screenprint-app[hidden],
+#funky-app[hidden] {
+  display: none;
+}
+
+.app-sidebar {
+  flex: 0 0 480px;
+  width: 480px;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+}
+
+/* Holds everything except the primary action buttons — this is the part that scrolls, so the
+   actions footer below stays visible regardless of scroll position instead of requiring a scroll
+   to the bottom to reach it. */
+.sidebar-scroll {
+  flex: 1 1 auto;
+  min-height: 0; /* required for a flex child to actually scroll instead of stretching its parent */
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* A real footer sibling (not `position: sticky` inside the scrolling content) — sticky would only
+   start pinning once scrolled down to it, so from a fresh scroll-to-top position it'd still be
+   hidden below the fold. This sits outside .sidebar-scroll entirely, so it's always on screen. */
+.sidebar-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  border-top: 1px solid var(--border);
+}
+
+#upload-row {
+  display: flex;
+}
+
+#top-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#top-actions button {
+  flex: 1;
+}
+
+.app-main {
+  position: relative; /* positioning context for .busy-overlay (position: absolute; inset: 0) */
+  flex: 1;
+  height: 100%;
+  min-height: 0; /* same flex-child scroll pitfall as .sidebar-scroll — without this, content taller
+    than the viewport grows #posterize-app/etc. past 100vh and scrolls the whole page (tabs and
+    sidebar included) instead of scrolling just this area */
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* See ui/busyOverlay.ts — a temporary "⏳ working…" cover shown over a tab's main preview area
+   while a heavy synchronous render or export runs, so it reads as busy rather than frozen. */
+.busy-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  z-index: 5;
+}
+
+@media (max-width: 860px) {
+  #app,
+  #airbrush-app,
+  #posterize-app,
+  #cmyk-app,
+  #screenprint-app,
+  #funky-app {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+
+  html, body {
+    height: auto;
+  }
+
+  .app-sidebar {
+    flex: none;
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .app-main {
+    height: auto;
+    flex: none;
+  }
+}
+
+#controls {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+}
+
+#layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: 0;
+}
+
+.layer-card.layer-disabled {
+  opacity: 0.45;
+}
+
+.layer-card.dragging {
+  opacity: 0.4;
+}
+
+.layer-card.drag-over {
+  border-color: var(--fg);
+  border-style: dashed;
+}
+
+.drag-handle {
+  cursor: grab;
+  font-size: 14px;
+  opacity: 0.6;
+  user-select: none;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.layer-card-header {
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+}
+
+/* Groups one Funky Stencils channel's own shape/brush-size/flat controls visually apart from its
+   neighbors — each channel's settings used to be a single unlabeled row easy to miss entirely
+   (see createFunkyChannelRow()'s doc comment); this makes each channel read as its own mini-panel. */
+.funky-channel-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 4px;
+}
+
+.field-label {
+  font-size: 11px;
+  opacity: 0.75;
+  min-width: 78px;
+  flex-shrink: 0;
+}
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.remove-button {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.layer-label {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.layer-card select {
+  max-width: 140px;
+}
+
+.range-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.range-slider-readout {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+  min-width: 62px;
+  text-align: right;
+}
+
+.range-slider-readout.disabled {
+  opacity: 0.35;
+}
+
+.range-slider {
+  position: relative;
+  flex: 1;
+  min-width: 100px;
+  height: 20px;
+}
+
+.range-slider.disabled {
+  opacity: 0.4;
+}
+
+.range-slider-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-soft);
+}
+
+.range-slider-fill {
+  position: absolute;
+  top: 8px;
+  height: 4px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.range-slider input[type='range'] {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+.range-slider input[type='range']::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+.range-slider input[type='range']::-moz-range-track {
+  background: transparent;
+}
+
+.range-slider input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: 1px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--fg);
+  cursor: pointer;
+}
+
+.range-slider input[type='range']::-moz-range-thumb {
+  pointer-events: auto;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--fg);
+  border: 1px solid var(--bg);
+  box-shadow: 0 0 0 1px var(--fg);
+  cursor: pointer;
+}
+
+.layer-card input[type='number'] {
+  width: 44px;
+}
+
+.color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slider-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+}
+
+.slider-field input[type='range'] {
+  flex: 1;
+  min-width: 80px;
+}
+
+.slider-field input[type='number'] {
+  width: 48px;
+}
+
+.hex-input {
+  width: 68px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.palette-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.palette-remove {
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.airbrush-palette-editor,
+.posterize-palette-editor,
+.posterize-band-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.posterize-interpolated-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.palette-row {
+  flex-wrap: nowrap;
+}
+
+.palette-original-swatch {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border-radius: 0;
+  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.palette-arrow {
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.stroke-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.stroke-item-row .slider-field {
+  min-width: 100px;
+}
+
+.stroke-item-row.stroke-disabled {
+  opacity: 0.45;
+}
+
+.stroke-distort-toggle {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.stroke-distort-toggle.active {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+#dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+#dropzone.drag-over {
+  outline: 2px dashed var(--border);
+  outline-offset: 8px;
+}
+
+/* No max-width/max-height on any of these — every tab's zoom toolbar sets its canvas's on-screen
+   size directly via inline style.width/height (a multiple of a computed "fit" base scale), and
+   needs to be able to exceed the viewport (the surrounding .app-main already scrolls) once zoomed
+   in past 100%. A CSS max-width would silently cap that. */
+#canvas,
+#airbrush-canvas,
+#posterize-canvas,
+#posterize-cmyk-canvas,
+#cmyk-preview-canvas {
+  border: 1px solid var(--border-soft);
+  display: block;
+}
+
+/* Download/save buttons for an already-generated CMYK-family result — built per-tab but always
+   rendered INTO the persistent #preview-actions-bar (see main.ts's refreshPreviewActionsBar()),
+   never nested inside the tab's own scrollable/zoomable preview area. No layout-defensive CSS
+   needed here beyond basic wrapping: the bar itself is a fixed, un-zoomed part of the page. */
+.preview-actions-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zoom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  background: Canvas;
+  padding: 4px 0;
+  z-index: 1;
+}
+
+.zoom-toolbar-label {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 42px;
+  text-align: center;
+}
+
+.zoom-toolbar button.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* The zoom toolbar's own scroll container while its move/pan toggle is armed — see
+   ui/zoomToolbar.ts. That's .app-main itself for the simpler single-canvas tabs (Threshold,
+   Airbrush, Posterize), but .cmyk-canvas-viewport for the tabs with a layers panel (CMYK, Screen
+   Print Export, Funky Stencils) — see createZoomToolbar()'s call sites in main.ts. Only relevant
+   once zoomed in past the point the image no longer fits on screen; harmless the rest of the time
+   since dragging with nothing to scroll just does nothing. */
+.app-main.pan-mode,
+.cmyk-canvas-viewport.pan-mode {
+  cursor: grab;
+}
+
+.app-main.pan-mode.panning,
+.cmyk-canvas-viewport.pan-mode.panning {
+  cursor: grabbing;
+}
+
+/* Posterize's normal-vs-CMYK-approximated preview switcher — see updatePosterizeMainView() in
+   main.ts. Lives inside .zoom-toolbar (see the comment at posterizeViewTabs' creation in main.ts
+   for why), set off from the zoom controls to its left with a rule + margin so the two don't read
+   as one undifferentiated button cluster. Small/understated on purpose, same idea as
+   .library-panel-tab but scoped to this one sub-area rather than the whole app. */
+.posterize-view-tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border-soft);
+}
+
+.posterize-view-tabs button.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* CMYK Screenprint Export's generated preview: the flattened composite canvas alongside a
+   Photoshop-style layers panel (one row per channel, thumbnail + swatch, click to hide/show). This
+   row is .app-main's ONE child in the "has result" state (see main.ts) — `flex: 1 1 0` +
+   `align-self: stretch` claim .app-main's FULL content box (both axes) instead of being sized/
+   centered to content the way .app-main's `align-items/justify-content: center` would otherwise do
+   for a plain, un-stretched child; `min-width`/`min-height: 0` (flex items default to `auto`,
+   refusing to shrink below content size) let .cmyk-canvas-viewport actually claim only the space
+   left over once the layers panel takes its own natural width, instead of forcing this row wider
+   than the viewport. */
+.cmyk-main-row {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Scrollable viewport for JUST the zoomable preview canvas (see main.ts's
+   funkyCanvasViewportEl/screenprintCanvasViewportEl and createZoomToolbar() usage) — deliberately
+   the thing that scrolls/grows when zoomed, NOT .cmyk-main-row or .app-main, so a zoomed-in canvas
+   never pushes .cmyk-layers-panel away or overflows .app-main's own centering. Used in two contexts
+   sharing this one class: as .cmyk-main-row's child (claims the row's leftover width once the
+   layers panel, flex: 0 0 auto, takes its own) and as .app-main's own direct/only child before a
+   result exists yet (no layers panel at all) — `flex: 1 1 0` + `align-self: stretch` correctly
+   claim the FULL available space from EITHER parent, since flex-grow/align-self always resolve
+   against whichever element is the immediate parent. Centers its own (possibly zoomed) canvas via
+   the same align/justify-content:center technique .app-main itself uses for simpler single-canvas
+   tabs — the difference is this container's own `overflow: auto` is what actually scrolls once
+   zoomed past the point of fitting, not .app-main's. */
+.cmyk-canvas-viewport {
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.cmyk-layers-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 0 0 auto;
+  /* Scrolls independently of the canvas next to it once there are enough rows (e.g. Posterize with
+     more than ~5 colors) to exceed the available height — otherwise this column's own height used
+     to push .cmyk-main-row (and with it the canvas) out of view, requiring the whole page to scroll
+     just to see colors further down the list. Matches .app-main's own available height exactly (see
+     its min-height:0 comment) so it never overflows THAT, just scrolls internally instead. */
+  max-height: calc(100vh - 41px - var(--preview-actions-bar-height) - var(--library-panel-height) - 32px);
+  overflow-y: auto;
+}
+
+.cmyk-layer-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 110px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.cmyk-layer-thumb {
+  /* object-fit doesn't reliably apply to <canvas> across browsers — the canvas's own bitmap
+     resolution (set in JS) is scaled to fill this box instead, which may stretch a non-square
+     photo slightly. Acceptable at this thumbnail size; the real preview canvas isn't affected. */
+  width: 96px;
+  height: 96px;
+  display: block;
+  border: 1px solid var(--border-soft);
+}
+
+.cmyk-layer-row.cmyk-layer-hidden {
+  opacity: 0.35;
+}
+
+.cmyk-layer-row.cmyk-layer-hidden .cmyk-layer-thumb {
+  filter: grayscale(1);
+}
+
+.cmyk-layer-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmyk-layer-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
+.cmyk-layer-label {
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.cmyk-layer-remove {
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.cmyk-layer-remove:hover {
+  opacity: 1;
+}
+
+.cmyk-layer-add {
+  width: 110px;
+}
+
+#library-error {
+  color: #c00;
+  font-size: 12px;
+  margin: 0;
+}
+
+.section-caption {
+  font-size: 11px;
+  opacity: 0.7;
+  margin: -6px 0 0 0;
+}
+
+/* Stage-based progress bar shown while a "Generate separations" pipeline is running (CMYK and
+   Screen Print Export tabs) — an approximate indicator advancing through the pipeline's known
+   stages (palette/conversion, coverage/halftone, PDF build), not a byte-accurate percentage. */
+.progress-bar {
+  height: 6px;
+  border: 1px solid var(--border);
+  margin: 2px 0 0 0;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--fg);
+  transition: width 0.2s ease;
+}
+
+/* Running, timestamped narration of a busy Generate — see FunkyStencilsGenerationStatus's/
+   ScreenPrintGenerationStatus's doc comments for why this exists alongside the progress bar (a
+   demanding print can take tens of seconds with the bar alone sitting still for a long stretch
+   mid-phase). A small monospace scroll-log, "terminal"-style, given the whole app is already
+   monospace — the newest line (kept full-contrast, older ones dimmed to --muted) is what confirms
+   it's still actively working rather than stuck. */
+.progress-log {
+  margin: 6px 0 0 0;
+  padding: 6px 8px;
+  border: 1px solid var(--border-soft);
+  max-height: 110px;
+  overflow-y: auto;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+.progress-log > div:last-child {
+  color: var(--fg);
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.library-empty {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+/* Library panel's "A1111" tab (ui/a1111Browser.ts). */
+.a1111-browser:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.a1111-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.a1111-controls input,
+.a1111-controls select,
+.a1111-controls button {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.a1111-controls .a1111-url {
+  width: 170px;
+}
+
+.a1111-controls input[type='search'] {
+  width: 200px;
+}
+
+.a1111-page {
+  min-width: 52px;
+  text-align: center;
+}
+
+.a1111-status {
+  opacity: 0.7;
+  margin-left: 6px;
+}
+
+.a1111-status.error {
+  opacity: 1;
+  color: #ff6b6b;
+}
+
+.library-item.busy {
+  opacity: 0.4;
+  cursor: progress;
+}
+
+#library-grid,
+.a1111-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.library-item {
+  position: relative;
+  border: 1px solid var(--border-soft);
+  border-radius: 0;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+
+.library-thumb {
+  padding: 0;
+  border: none;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  background: none;
+}
+
+.library-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.library-download,
+.library-edit {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+.library-edit {
+  right: auto;
+  left: 2px;
+}
+
+#library-meta-dialog {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+}
+
+#library-meta-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#library-meta-dialog label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.library-tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.library-tag-suggestions button {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.library-meta-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#history-controls {
+  display: flex;
+  gap: 8px;
+}
+
+#presets,
+#airbrush-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#presets input[type='text'],
+#airbrush-presets input[type='text'] {
+  flex: 1;
+}
+
+#batch {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.batch-status {
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+#batch-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.batch-result {
+  position: relative;
+  border: 1px solid var(--border-soft);
+  border-radius: 0;
+  overflow: hidden;
+  aspect-ratio: 1;
+}
+
+.batch-result img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.batch-result button {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
+/* Palette eyedropper (ui/colorPicker.ts) — the original photo in a modal, with a magnifier loupe. */
+.pick-color-button {
+  padding: 2px 6px;
+  flex: 0 0 auto;
+}
+
+#color-picker-dialog {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 12px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  box-sizing: border-box;
+}
+
+.color-picker-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.color-picker-header button {
+  margin-left: auto;
+}
+
+.color-picker-swatch {
+  width: 28px;
+  height: 18px;
+  border: 1px solid var(--border);
+  background: transparent;
+}
+
+.color-picker-stage {
+  position: relative;
+  line-height: 0;
+}
+
+.color-picker-stage > canvas:first-child {
+  cursor: crosshair;
+  max-width: 100%;
+}
+
+.color-picker-loupe {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px #0006;
+}
+
+/* --- Riso tab --- same layout as the other tool tabs (kept as its own block rather than joining
+   the shared #app/#posterize-app/... selector lists above). */
+#riso-app {
+  display: flex;
+  height: calc(100vh - 41px - var(--preview-actions-bar-height) - var(--library-panel-height));
+  overflow: hidden;
+}
+
+#riso-app[hidden] {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  #riso-app {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+#riso-canvas {
+  border: 1px solid var(--border-soft);
+  display: block;
+}
+
+.riso-ink {
+  border-top: 1px solid var(--border-soft);
+  padding-top: 6px;
+  margin-top: 6px;
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Riso</title>
+    <meta name="description" content="Turn any image into a Risograph print: 1-4 inks, grain, misregistration and print-ready per-ink files." />
+  </head>
+  <body class="riso-standalone">
+    <header id="riso-header">
+      <span class="riso-logo">RISO</span>
+      <span class="riso-tagline">Upload an image → Risograph print</span>
+    </header>
+    <div id="riso-app">
+      <div id="riso-sidebar" class="app-sidebar"></div>
+      <div id="riso-main" class="app-main">
+        <label id="riso-dropzone">
+          <input id="riso-file-input" type="file" accept="image/*" hidden />
+          <span>Drop an image here<br />or click to upload</span>
+        </label>
+        <canvas id="riso-canvas"></canvas>
+      </div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

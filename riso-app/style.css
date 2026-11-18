@@ -1,0 +1,89 @@
+/* Standalone Riso app: reuses the main app's stylesheet for the sidebar controls, minus the
+   library panel / preview-actions bar that only exist in the full generator. */
+:root {
+  --library-panel-height: 0px;
+  --preview-actions-bar-height: 0px;
+}
+
+#riso-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  height: 41px;
+  box-sizing: border-box;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+.riso-logo {
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #ff48b0;
+  text-shadow: 2px -1px 0 #3255a4;
+}
+
+.riso-tagline {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#riso-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: auto;
+  width: min(480px, 100%);
+  min-height: 240px;
+  border: 2px dashed var(--border-soft);
+  font-family: var(--mono);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+#riso-main.dragging #riso-dropzone,
+#riso-dropzone:hover {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+body.has-image #riso-dropzone {
+  display: none;
+}
+
+body:not(.has-image) #riso-canvas,
+body:not(.has-image) #riso-main .zoom-toolbar {
+  display: none;
+}
+
+#riso-main.dragging {
+  outline: 2px dashed var(--fg);
+  outline-offset: -8px;
+}
+
+/* Phones: the sidebar stacks above the image — let it grow to its full content height instead of
+   squeezing everything into the desktop layout's fixed-height scroll box. The image comes first so
+   the result is visible right away; controls follow underneath. */
+@media (max-width: 860px) {
+  #riso-app {
+    flex-direction: column-reverse;
+  }
+
+  #riso-sidebar.app-sidebar {
+    flex: none;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-top: 1px solid var(--border);
+  }
+
+  #riso-sidebar .sidebar-scroll {
+    flex: none;
+    overflow: visible;
+  }
+
+  #riso-main.app-main {
+    min-height: 60vh;
+  }
+}
