@@ -26,6 +26,9 @@ describe('surpriseRiso', () => {
         expect(ink.density).toBeLessThanOrEqual(1.3)
         expect(Math.abs(ink.offsetX)).toBeLessThanOrEqual(4)
         expect(Math.abs(ink.offsetY)).toBeLessThanOrEqual(4)
+        expect(['smooth', 'noise', 'dither']).toContain(ink.screen)
+        expect(ink.dotSize).toBeGreaterThanOrEqual(1)
+        expect(ink.dotSize).toBeLessThanOrEqual(8)
       }
       expect(s.grain.amount).toBeGreaterThanOrEqual(0.2)
       expect(s.grain.amount).toBeLessThanOrEqual(0.7)

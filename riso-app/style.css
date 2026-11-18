@@ -2,7 +2,25 @@
    library panel / preview-actions bar that only exist in the full generator. */
 :root {
   --library-panel-height: 0px;
-  --preview-actions-bar-height: 0px;
+  /* The main app's preview-actions bar doesn't exist here — this slot is the footer instead. */
+  --preview-actions-bar-height: 32px;
+}
+
+#riso-footer {
+  height: 32px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#riso-footer a {
+  color: var(--fg);
 }
 
 #riso-header {

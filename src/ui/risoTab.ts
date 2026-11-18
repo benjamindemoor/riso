@@ -162,6 +162,27 @@ function checkbox(text: string, checked: boolean, onChange: (checked: boolean) =
   return label
 }
 
+function screenSelect(ink: RisoInkSettings, callbacks: RisoCallbacks): HTMLSelectElement {
+  const select = document.createElement('select')
+  for (const [value, label] of [
+    ['smooth', 'Smooth tone'],
+    ['noise', 'Noise (riso grain dots)'],
+    ['dither', 'Dither (error diffusion)'],
+  ] as const) {
+    const option = document.createElement('option')
+    option.value = value
+    option.textContent = label
+    select.append(option)
+  }
+  select.value = ink.screen
+  select.title = 'How this drum lays down its ink — noise/dither dots also go into its print file'
+  select.addEventListener('change', () => {
+    ink.screen = select.value as RisoInkSettings['screen']
+    callbacks.onSettle()
+  })
+  return select
+}
+
 function createInkEditor(state: RisoState, ink: RisoInkSettings, index: number, callbacks: RisoCallbacks): HTMLElement {
   const section = document.createElement('div')
   section.className = 'riso-ink'
@@ -190,6 +211,20 @@ function createInkEditor(state: RisoState, ink: RisoInkSettings, index: number, 
         callbacks.onSettle()
       }),
     ),
+    fieldRow('Screen', screenSelect(ink, callbacks)),
+  )
+  if (ink.screen !== 'smooth') {
+    section.append(
+      fieldRow(
+        'Dot size',
+        sliderField(1, 8, ink.dotSize, 'Size of the noise/dither dots (preview pixels) — bigger is chunkier', (v) => {
+          ink.dotSize = v
+          callbacks.onSettle()
+        }),
+      ),
+    )
+  }
+  section.append(
     fieldRow(
       'Offset X',
       sliderField(-20, 20, ink.offsetX, 'Misregistration of this drum, horizontally (preview pixels)', (v) => {
@@ -376,8 +411,8 @@ export function renderRisoSidebar(container: HTMLElement, state: RisoState, ui: 
   const surpriseButton = document.createElement('button')
   surpriseButton.type = 'button'
   surpriseButton.className = 'riso-surprise'
-  surpriseButton.textContent = '🎲 Surprise riso'
-  surpriseButton.title = 'Random inks, paper, grain and misregistration (and sometimes an outline)'
+  surpriseButton.textContent = '🎲 Randomize'
+  surpriseButton.title = 'Random inks, paper, grain, dots and misregistration (and sometimes an outline)'
   surpriseButton.addEventListener('click', callbacks.onSurprise)
 
   const scroll = document.createElement('div')

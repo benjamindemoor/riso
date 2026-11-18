@@ -3,6 +3,8 @@ import { adjustCoverage } from '../riso/risoAdjust.ts'
 import { applyGrain, grainField, screenStochastic } from '../riso/risoGrain.ts'
 import { compositeRiso, coverageToGreyscale, type RisoLayer } from '../riso/risoComposite.ts'
 import { photoDarkness, strokeCoverage } from '../riso/risoStrokes.ts'
+import { ditherFloydSteinberg, downsampleAverage, upsampleNearest } from '../riso/risoScreen.ts'
+import type { RisoInkSettings } from '../riso/risoState.ts'
 import { surpriseRiso } from '../riso/risoSurprise.ts'
 import { deleteRisoPreset, listRisoPresetNames, loadRisoPreset, saveRisoPreset } from '../riso/risoPresets.ts'
 import { createDefaultRisoState, type RisoState } from '../riso/risoState.ts'
@@ -62,6 +64,8 @@ interface Drum {
   /** Coverage before grain — what continuous-tone print files contain. */
   clean: Uint8Array
   grainIndex: number
+  /** For a noise/dither ink: its 1-bit dots, exactly as printed — always used for its print file. */
+  dots: Uint8Array | null
 }
 
 function slug(text: string): string {
@@ -93,6 +97,19 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
     }
   }
 
+  /** Turns one ink's coverage into noise/dither dots on a grid of `dotSize × scale` px cells, so
+   *  dots keep the same size relative to the picture in the preview and at full resolution. */
+  function screenInk(cov: Uint8Array, ink: RisoInkSettings, index: number, width: number, height: number, scale: number): Uint8Array | null {
+    if (ink.screen === 'smooth') return null
+    const cell = Math.max(1, Math.round(ink.dotSize * scale))
+    const small = downsampleAverage(cov, width, height, cell)
+    const dots =
+      ink.screen === 'dither'
+        ? ditherFloydSteinberg(small.data, small.width, small.height)
+        : screenStochastic(small.data, grainField(small.width, small.height, { ...state.grain, size: 1, starvation: 0 }, 200 + index))
+    return upsampleNearest(dots, small.width, cell, width, height)
+  }
+
   /** Every printed drum for `sep` — inks first, then strokes on top. `scale` = this render's width
    *  ÷ the preview's width, so grain, offsets and stroke widths stay the same relative size. */
   function buildDrums(sep: Separation, scale: number, withGrain: boolean): Drum[] {
@@ -105,11 +122,14 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
     state.inks.forEach((ink, index) => {
       if (!ink.visible) return
       const clean = adjusted[index]
+      // Screened inks get their dots from the grained tone, so grain still shows as clumping.
+      const dots = screenInk(grained(clean, index), ink, index, width, height, scale)
       drums.push({
         label: `${index + 1}-${slug(risoInkLabel(ink.hex))}`,
         clean,
         grainIndex: index,
-        layer: { coverage: grained(clean, index), hex: ink.hex, offsetX: ink.offsetX * scale, offsetY: ink.offsetY * scale },
+        dots,
+        layer: { coverage: dots ?? grained(clean, index), hex: ink.hex, offsetX: ink.offsetX * scale, offsetY: ink.offsetY * scale },
       })
     })
 
@@ -128,6 +148,7 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
         label: `stroke-${index + 1}-${slug(risoInkLabel(stroke.hex))}`,
         clean,
         grainIndex,
+        dots: null,
         layer: { coverage: grained(clean, grainIndex), hex: stroke.hex, offsetX: 0, offsetY: 0 },
       })
     })
@@ -242,12 +263,13 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
           if (!hasImage()) return
           void withBusyOverlay(deps.mainEl, 'Rendering print files…', async () => {
             const { sep, scale } = fullRes()
-            // Print files carry no misregistration (the machine adds its own) and, in continuous
-            // mode, no grain either — the drum's own screening provides it.
-            for (const drum of buildDrums(sep, scale, false)) {
+            // Print files carry no misregistration (the machine adds its own). Noise/dither inks
+            // export their exact dots; smooth inks export clean tone (or, in "pre-screened" mode,
+            // grain-screened dots) — the drum's own screening does the rest.
+            for (const drum of buildDrums(sep, scale, true)) {
               await yieldToBrowser()
-              let cov = drum.clean
-              if (state.separationMode === 'stochastic') {
+              let cov = drum.dots ?? drum.clean
+              if (!drum.dots && state.separationMode === 'stochastic') {
                 const field = grainField(sep.width, sep.height, state.grain, drum.grainIndex, scale)
                 if (state.grain.amount > 0) cov = applyGrain(cov, field, state.grain.amount)
                 cov = screenStochastic(cov, field)

@@ -1,5 +1,6 @@
 import { RISO_INKS } from './risoInks.ts'
 import type { GrainSettings } from './risoGrain.ts'
+import type { RisoScreen } from './risoScreen.ts'
 
 /** One ink drum in the Riso tab. `id` is stable across edits (used for export order/filenames). */
 export interface RisoInkSettings {
@@ -13,6 +14,10 @@ export interface RisoInkSettings {
   offsetX: number
   offsetY: number
   visible: boolean
+  /** How this drum lays its ink down: smooth tone, stochastic noise dots or dither dots. */
+  screen: RisoScreen
+  /** Dot size for noise/dither, in preview pixels (1-8). */
+  dotSize: number
 }
 
 /** An outline printed as its own extra riso drum. */
@@ -52,7 +57,7 @@ export function risoInkHex(name: string): string {
 }
 
 export function createRisoInk(hex: string, overrides: Partial<Omit<RisoInkSettings, 'id' | 'hex'>> = {}): RisoInkSettings {
-  return { id: newRisoId('ink'), hex, density: 1, contrast: 0, offsetX: 0, offsetY: 0, visible: true, ...overrides }
+  return { id: newRisoId('ink'), hex, density: 1, contrast: 0, offsetX: 0, offsetY: 0, visible: true, screen: 'smooth', dotSize: 2, ...overrides }
 }
 
 export function createRisoStroke(overrides: Partial<Omit<RisoStroke, 'id'>> = {}): RisoStroke {

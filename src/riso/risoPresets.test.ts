@@ -53,9 +53,18 @@ describe('normalizeRisoState', () => {
     expect(state.inks).toHaveLength(4)
     expect(state.inks[0].density).toBe(1)
     expect(state.inks[0].visible).toBe(true)
+    expect(state.inks[0].screen).toBe('smooth')
+    expect(state.inks[0].dotSize).toBe(2)
     expect(state.strokes).toEqual([])
     expect(state.paperHex).toMatch(/^#[0-9a-f]{6}$/)
     expect(state.grain.amount).toBeGreaterThanOrEqual(0)
+  })
+
+  it('keeps a valid screen and clamps the dot size', () => {
+    const state = normalizeRisoState({ inks: [{ hex: '#000000', screen: 'dither', dotSize: 99 }, { hex: '#ff48b0', screen: 'bogus' }] })
+    expect(state.inks[0].screen).toBe('dither')
+    expect(state.inks[0].dotSize).toBe(8)
+    expect(state.inks[1].screen).toBe('smooth')
   })
 
   it('falls back to the default state for garbage', () => {

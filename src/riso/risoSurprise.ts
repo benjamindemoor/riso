@@ -1,4 +1,5 @@
 import { RISO_INKS } from './risoInks.ts'
+import type { RisoScreen } from './risoScreen.ts'
 import { createRisoInk, createRisoStroke, risoInkHex, type RisoState } from './risoState.ts'
 
 /** Papers a riso print plausibly lands on: off-whites, a kraft and a pale pastel. */
@@ -6,6 +7,9 @@ const PAPERS = ['#ffffff', '#f4f0e6', '#f7f1e1', '#efe6d2', '#e9dcc3', '#fdf3f3'
 
 /** Inks that read well as an outline over most combinations. */
 const STROKE_INKS = ['Black', 'Burgundy', 'Medium Blue', 'Teal', 'Bright Red']
+
+/** Weighted toward smooth: 2 in 4 smooth, 1 noise, 1 dither. */
+const SCREENS: RisoScreen[] = ['smooth', 'smooth', 'noise', 'dither']
 
 function between(rand: () => number, min: number, max: number): number {
   return min + rand() * (max - min)
@@ -36,6 +40,9 @@ export function surpriseRiso(rand: () => number = Math.random): RisoState {
       // The first drum is the registration reference; the others drift off it.
       offsetX: index === 0 ? 0 : intBetween(rand, -4, 4),
       offsetY: index === 0 ? 0 : intBetween(rand, -4, 4),
+      // Mostly smooth tone; sometimes a drum gets real riso dots.
+      screen: SCREENS[pickIndex(rand, SCREENS.length)],
+      dotSize: intBetween(rand, 1, 4),
     })
   })
 

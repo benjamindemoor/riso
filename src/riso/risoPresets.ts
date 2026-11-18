@@ -40,6 +40,8 @@ export function normalizeRisoState(raw: unknown): RisoState {
         offsetX: num(ink?.offsetX, 0, -20, 20),
         offsetY: num(ink?.offsetY, 0, -20, 20),
         visible: ink?.visible ?? true,
+        screen: ink?.screen === 'noise' || ink?.screen === 'dither' ? ink.screen : 'smooth',
+        dotSize: Math.round(num(ink?.dotSize, 2, 1, 8)),
       }),
     )
   if (inks.length === 0) return defaults
