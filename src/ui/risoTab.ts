@@ -39,7 +39,8 @@ export interface RisoUiState {
   /** False in the standalone Riso app, which has no library — hides the save button entirely. */
   showSaveToLibrary?: boolean
   presetNames: string[]
-  isBuiltInPreset: (name: string) => boolean
+  /** The preset last applied or saved — stays selected in the dropdown. */
+  activePreset: string | null
 }
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/
@@ -300,28 +301,29 @@ function createStrokeEditor(state: RisoState, stroke: RisoStroke, index: number,
 
 function createPresetSection(ui: RisoUiState, callbacks: RisoCallbacks): HTMLElement[] {
   const select = document.createElement('select')
+  const placeholder = document.createElement('option')
+  placeholder.value = ''
+  placeholder.textContent = ui.presetNames.length === 0 ? 'No presets saved yet' : 'Choose a preset…'
+  select.append(placeholder)
   for (const name of ui.presetNames) {
     const option = document.createElement('option')
     option.value = name
     option.textContent = name
     select.append(option)
   }
-
-  const apply = document.createElement('button')
-  apply.type = 'button'
-  apply.textContent = 'Apply'
-  apply.disabled = ui.presetNames.length === 0
-  apply.addEventListener('click', () => select.value && callbacks.onApplyPreset(select.value))
+  select.value = ui.activePreset && ui.presetNames.includes(ui.activePreset) ? ui.activePreset : ''
+  select.disabled = ui.presetNames.length === 0
+  select.title = 'Picking a preset applies it right away'
+  // Choosing applies immediately — no separate Apply step to forget.
+  select.addEventListener('change', () => {
+    if (select.value) callbacks.onApplyPreset(select.value)
+  })
 
   const remove = document.createElement('button')
   remove.type = 'button'
   remove.textContent = '🗑'
-  const updateRemove = () => {
-    remove.disabled = !select.value || ui.isBuiltInPreset(select.value)
-    remove.title = remove.disabled ? 'Built-in presets can’t be deleted' : 'Delete this preset'
-  }
-  updateRemove()
-  select.addEventListener('change', updateRemove)
+  remove.disabled = !select.value
+  remove.title = remove.disabled ? 'Pick a preset to delete it' : 'Delete this preset'
   remove.addEventListener('click', () => {
     if (select.value && confirm(`Delete preset "${select.value}"?`)) callbacks.onDeletePreset(select.value)
   })
@@ -329,15 +331,15 @@ function createPresetSection(ui: RisoUiState, callbacks: RisoCallbacks): HTMLEle
   const nameInput = document.createElement('input')
   nameInput.type = 'text'
   nameInput.placeholder = 'Preset name'
+  nameInput.value = ui.activePreset ?? ''
   const save = document.createElement('button')
   save.type = 'button'
   save.textContent = '💾 Save'
-  save.title = 'Saves the current inks, strokes, paper and grain as a preset'
+  save.title = 'Saves the current inks, strokes, paper and grain as a preset in this browser'
   const doSave = () => {
     const name = nameInput.value.trim()
-    if (!name) return
-    if (ui.isBuiltInPreset(name)) {
-      alert('That name belongs to a built-in preset — pick another one.')
+    if (!name) {
+      nameInput.focus()
       return
     }
     if (ui.presetNames.includes(name) && !confirm(`Overwrite preset "${name}"?`)) return
@@ -348,7 +350,7 @@ function createPresetSection(ui: RisoUiState, callbacks: RisoCallbacks): HTMLEle
     if (event.key === 'Enter') doSave()
   })
 
-  return [sectionTitle('Presets'), fieldRow('Preset', select, apply, remove), fieldRow('Save as', nameInput, save)]
+  return [sectionTitle('Presets'), fieldRow('Preset', select, remove), fieldRow('Save as', nameInput, save)]
 }
 
 export function renderRisoSidebar(container: HTMLElement, state: RisoState, ui: RisoUiState, callbacks: RisoCallbacks) {

@@ -1,12 +1,12 @@
 # Riso
 
-Turn any image into a Risograph print, right in the browser. Live: https://riso-mu.vercel.app
+Turn any image into a Risograph print, right in the browser. Live: https://riso-three.vercel.app
 
 - Upload an image with the button, by dragging it onto the page or by pasting it (⌘V / Ctrl+V).
 - The image is separated automatically into 1–4 Riso inks (Fluorescent Pink, Medium Blue, Yellow, Teal, Mint, …), overprinted like real translucent riso ink.
 - Per ink: density, contrast and misregistration offset. Global: paper colour, grain, grain size and patchiness.
 - Outline strokes, printed as extra ink drums.
-- 🎲 Surprise riso, built-in presets and your own presets (stored in your browser).
+- 🎲 Surprise riso, and your own presets (saved in your browser, per visitor).
 - Download the flattened PNG, or one 300 DPI greyscale PNG per ink/stroke (black = full ink), ready for a real Risograph — smooth greyscale or pre-screened with grain.
 
 Everything runs locally in your browser; images are never uploaded anywhere.

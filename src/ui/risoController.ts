@@ -4,7 +4,7 @@ import { applyGrain, grainField, screenStochastic } from '../riso/risoGrain.ts'
 import { compositeRiso, coverageToGreyscale, type RisoLayer } from '../riso/risoComposite.ts'
 import { photoDarkness, strokeCoverage } from '../riso/risoStrokes.ts'
 import { surpriseRiso } from '../riso/risoSurprise.ts'
-import { deleteRisoPreset, isBuiltInRisoPreset, listRisoPresetNames, loadRisoPreset, saveRisoPreset } from '../riso/risoPresets.ts'
+import { deleteRisoPreset, listRisoPresetNames, loadRisoPreset, saveRisoPreset } from '../riso/risoPresets.ts'
 import { createDefaultRisoState, type RisoState } from '../riso/risoState.ts'
 import { yieldToBrowser } from '../cmyk/asyncUtil.ts'
 import { buildPngAtDpi, downloadBlob } from '../export.ts'
@@ -70,6 +70,8 @@ function slug(text: string): string {
 
 export function createRisoController(deps: RisoControllerDeps): RisoController {
   let state: RisoState = createDefaultRisoState()
+  /** The preset last applied or saved, kept selected in the sidebar's dropdown. */
+  let activePreset: string | null = null
   const zoom = createZoomToolbar(deps.mainEl)
   deps.canvas.before(zoom.toolbar)
 
@@ -196,7 +198,7 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
     renderRisoSidebar(
       deps.sidebarEl,
       state,
-      { canSaveToLibrary: deps.canSaveToLibrary() && hasImage(), showSaveToLibrary: deps.libraryAvailable !== false, presetNames: listRisoPresetNames(), isBuiltInPreset: isBuiltInRisoPreset },
+      { canSaveToLibrary: deps.canSaveToLibrary() && hasImage(), showSaveToLibrary: deps.libraryAvailable !== false, presetNames: listRisoPresetNames(), activePreset },
       {
         onSettle: () => {
           refreshSidebar()
@@ -210,17 +212,24 @@ export function createRisoController(deps: RisoControllerDeps): RisoController {
           if (await deps.loadFile(file)) show()
         },
         onPickColor: () => pickColorFromImage(deps.source),
-        onSurprise: () => applyState(surpriseRiso()),
+        onSurprise: () => {
+          activePreset = null
+          applyState(surpriseRiso())
+        },
         onSavePreset: (name) => {
           saveRisoPreset(name, state)
+          activePreset = name
           refreshSidebar()
         },
         onApplyPreset: (name) => {
           const preset = loadRisoPreset(name)
-          if (preset) applyState(preset)
+          if (!preset) return
+          activePreset = name
+          applyState(preset)
         },
         onDeletePreset: (name) => {
           deleteRisoPreset(name)
+          if (activePreset === name) activePreset = null
           refreshSidebar()
         },
         onDownload: () => {

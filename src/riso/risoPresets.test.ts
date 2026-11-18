@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BUILT_IN_RISO_PRESETS, deleteRisoPreset, listRisoPresetNames, loadRisoPreset, normalizeRisoState, saveRisoPreset } from './risoPresets.ts'
+import { deleteRisoPreset, listRisoPresetNames, loadRisoPreset, normalizeRisoState, saveRisoPreset } from './risoPresets.ts'
 import { createDefaultRisoState } from './risoState.ts'
 
 function fakeStorage(): Pick<Storage, 'getItem' | 'setItem'> {
@@ -8,9 +8,15 @@ function fakeStorage(): Pick<Storage, 'getItem' | 'setItem'> {
 }
 
 describe('riso presets', () => {
-  it('lists built-in presets even with empty storage', () => {
-    const names = listRisoPresetNames(fakeStorage())
-    for (const preset of BUILT_IN_RISO_PRESETS) expect(names).toContain(preset.name)
+  it('starts without any presets', () => {
+    expect(listRisoPresetNames(fakeStorage())).toEqual([])
+  })
+
+  it('lists saved presets alphabetically', () => {
+    const storage = fakeStorage()
+    saveRisoPreset('zine', createDefaultRisoState(), storage)
+    saveRisoPreset('Affiche', createDefaultRisoState(), storage)
+    expect(listRisoPresetNames(storage)).toEqual(['Affiche', 'zine'])
   })
 
   it('saves, loads and deletes a user preset', () => {
@@ -35,10 +41,8 @@ describe('riso presets', () => {
     expect(loadRisoPreset('Mine', storage)!.inks[0].density).toBe(1)
   })
 
-  it('loads a built-in preset', () => {
-    const loaded = loadRisoPreset(BUILT_IN_RISO_PRESETS[0].name, fakeStorage())
-    expect(loaded).not.toBeNull()
-    expect(loaded!.inks.length).toBeGreaterThan(0)
+  it('returns null for a preset that does not exist', () => {
+    expect(loadRisoPreset('nope', fakeStorage())).toBeNull()
   })
 })
 

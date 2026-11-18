@@ -72,30 +72,6 @@ export function normalizeRisoState(raw: unknown): RisoState {
   }
 }
 
-/** Starter looks that always exist (not deletable). Stored in the same loose shape a saved
- *  preset has, and loaded through normalizeRisoState() like one. */
-export const BUILT_IN_RISO_PRESETS: { name: string; state: unknown }[] = [
-  {
-    name: '★ Pink + Blue',
-    state: { inks: [{ hex: risoInkHex('Fluorescent Pink') }, { hex: risoInkHex('Medium Blue'), offsetX: 2, offsetY: -2 }] },
-  },
-  {
-    name: '★ Sunflower + Teal',
-    state: { inks: [{ hex: risoInkHex('Sunflower') }, { hex: risoInkHex('Teal'), offsetX: -2, offsetY: 1 }], paperHex: '#f7f1e1' },
-  },
-  {
-    name: '★ Mint + Pink + Black outline',
-    state: {
-      inks: [{ hex: risoInkHex('Mint') }, { hex: risoInkHex('Fluorescent Pink'), offsetX: 3, offsetY: 2 }],
-      strokes: [{ hex: risoInkHex('Black'), threshold: 110, width: 2 }],
-    },
-  },
-  {
-    name: '★ Mono black, heavy grain',
-    state: { inks: [{ hex: risoInkHex('Black'), contrast: 0.3 }], paperHex: '#efe6d2', grain: { amount: 0.7, size: 2, starvation: 0.5, seed: 1 } },
-  },
-]
-
 function readStore(storage: PresetStorage): Record<string, unknown> {
   try {
     const parsed = JSON.parse(storage.getItem(STORAGE_KEY) ?? '{}')
@@ -113,13 +89,9 @@ function writeStore(store: Record<string, unknown>, storage: PresetStorage) {
   }
 }
 
-/** Built-ins first (in their own order), then the user's presets alphabetically. */
+/** The presets saved in this browser, alphabetically (case-insensitive). */
 export function listRisoPresetNames(storage: PresetStorage = localStorage): string[] {
-  return [...BUILT_IN_RISO_PRESETS.map((preset) => preset.name), ...Object.keys(readStore(storage)).sort()]
-}
-
-export function isBuiltInRisoPreset(name: string): boolean {
-  return BUILT_IN_RISO_PRESETS.some((preset) => preset.name === name)
+  return Object.keys(readStore(storage)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
 }
 
 export function saveRisoPreset(name: string, state: RisoState, storage: PresetStorage = localStorage) {
@@ -129,8 +101,6 @@ export function saveRisoPreset(name: string, state: RisoState, storage: PresetSt
 }
 
 export function loadRisoPreset(name: string, storage: PresetStorage = localStorage): RisoState | null {
-  const builtIn = BUILT_IN_RISO_PRESETS.find((preset) => preset.name === name)
-  if (builtIn) return normalizeRisoState(builtIn.state)
   const stored = readStore(storage)[name]
   return stored ? normalizeRisoState(stored) : null
 }
