@@ -1,4 +1,4 @@
-# Risoify
+# Risofy
 
 Turn any image into a Risograph print, right in the browser. Live: https://riso-three.vercel.app
 
