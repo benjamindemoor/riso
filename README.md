@@ -23,4 +23,4 @@ npm run build   # static site in riso-app/dist
 
 The image processing lives in `src/riso/` (DOM-free, unit-tested); the UI in `src/ui/riso*.ts` and `riso-app/`.
 
-Made by Benjamin Ikoma.
+Made by [Benjamin Ikoma](https://benjaminikoma.be).
